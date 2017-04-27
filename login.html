@@ -49,6 +49,7 @@
       <!--login form-->
       <div class="box">
         <form>
+          <!--email input-->
           <div class="field">
             <p class="control has-icons-left">
               <input class="input" type="email" placeholder="Email">
@@ -57,6 +58,8 @@
               </span>
             </p>
           </div>
+
+          <!--password input-->
           <div class="field">
             <p class="control has-icons-left">
               <input class="input" type="password" placeholder="Password">
@@ -65,18 +68,44 @@
               </span>
             </p>
           </div>
-          <div class="field">
-            <p class="control">
-              <button class="button is-success" id="log-in-button">
-                Login
-              </button>
 
-              <button class="button is-info" id="sign-in-button">
-                Sign up
-              </button>
-            </p>
+          <!--password confirmation-->
+          <template v-if="isSignIn">
+            <div class="field">
+              <p class="control has-icons-left">
+                <input class="input" type="password" placeholder="Password Confirmation">
+                <span class="icon is-small is-left">
+                  <i class="fa fa-lock"></i>
+                </span>
+              </p>
+            </div>
+          </template>
+
+          <!--buttons-->
+          <div class="field">
+            <template v-if="!isSignIn">
+              <p class="control">
+                <button class="button is-success" id="log-in-button">
+                  Login
+                </button>
+                <button class="button is-info" id="sign-in-button" @click.prevent="toggleSignIn">
+                  Sign up
+                </button>
+              </p>
+            </template>
+            <template v-else>
+              <p class="control">
+                <button class="button is-success" id="log-in-button">
+                  Submit
+                </button>
+                <button class="button is-light" id="sign-in-button" @click.prevent="toggleSignIn">
+                  Back
+                </button>
+              </p>
+            </template>
           </div>
         </form>
+
       </div>
       <!--end of form-->
 
@@ -84,5 +113,21 @@
     <!--end of column-->
   </div>
   <!--end of container-->
+
+  <script>
+    const app = new Vue({
+      el: '#app',
+
+      data: {
+        isSignIn: false,
+      },
+
+      methods: {
+        toggleSignIn() {
+          this.isSignIn = !this.isSignIn;
+        }
+      }
+    });
+  </script>
 </body>
 </html>
