@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.16.1/axios.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.3.0/vue.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.18.1/moment.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.4.1/css/bulma.min.css">
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
   <title>MoneyBook</title>
@@ -13,7 +14,6 @@
     height: 100%;
     padding: 0;
     margin: 0;
-    overflow: hidden;
     background-color: #E6E6E6;
   }
 
@@ -30,9 +30,21 @@
   .message:not(:last-child) {
     margin-bottom: 0;
   }
+  
+  .message-body {
+    font-weight: 600;
+  }
 
   .button {
     float: right;
+  }
+
+  .income {
+    color: green;
+  }
+
+  .outcome {
+    color: red;
   }
   </style>
 </head>
@@ -62,7 +74,7 @@
               <p>Income</p>
             </div>
             <div class="message-body">
-              + 10000
+              {{ sumOfIncome }}
             </div>
           </article>
         </div>
@@ -72,7 +84,7 @@
               <p>Outcome</p>
             </div>
             <div class="message-body">
-              - 10000
+              {{ sumOfOutcome }}
             </div>
           </article>
         </div>
@@ -82,7 +94,7 @@
               <p>Total</p>
             </div>
             <div class="message-body">
-              0
+              {{ totalAmount }}
             </div>
           </article>
         </div>
@@ -99,18 +111,107 @@
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td>2017-04-20</td>
-            <td>+1000</td>
-            <td>Description</td>
-            <td>
-              <button class="button is-danger">Delete</button>
-              <button class="button is-light">Edit</button>
-            </td>
-          </tr>
+          <template v-for="record in allRecords">
+            <tr>
+              <input type="hidden" name="record_id" :value="record.id">
+              <td>{{ record.created_at }}</td>
+              <td :class="{
+                income: record.amount > 0,
+                outcome: record.amount < 0
+              }">
+                {{ record.amount }}
+              </td>
+              <td>{{ record.description }}</td>
+              <td>
+                <button class="button is-danger">Delete</button>
+                <button class="button is-light">Edit</button>
+              </td>
+            </tr>
+          </template>
         </tbody>
       </table>
     </div>
   </div>
+
+  <script>
+    const app = new Vue({
+      el: '#app',
+
+      data: {
+        records: [],
+        insertForm: '',
+        updateForm: ''
+      },
+
+      computed: {
+        allRecords() {
+          return this.records.reverse().map(record => {
+            let createdAt = record.created_at.replace(/\sUTC$/, '');
+            let localCreatedAt = moment.utc(createdAt).local().format('YYYY-MM-DD HH:mm:ss');
+
+            return {
+              id: record.id,
+              amount: record.amount,
+              description: record.description,
+              created_at: localCreatedAt
+            }
+          });
+        },
+
+        sumOfIncome() {
+          return this.records.filter(record => {
+            return record.amount > 0;
+          }).reduce((sum, income) => {
+            return sum + income.amount;
+          }, 0);
+        },
+
+        sumOfOutcome() {
+          return this.records.filter(record => {
+            return record.amount < 0;
+          }).reduce((sum, outcome) => {
+            return sum + outcome.amount;
+          }, 0);
+        },
+
+        totalAmount() {
+          return this.records.reduce((sum, record) => {
+            return sum + record.amount;
+          }, 0);
+        }
+      },
+
+      created() {
+        let token = localStorage.getItem('auth_token');
+
+        if (!token) {
+          location.href = './login.html';
+        }
+
+        this.fetchData(token);
+      },
+
+      methods: {
+        fetchData(token) {
+          axios({
+            method: 'get',
+            url: 'http://localhost:2300/api/records',
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+          .then(response => {
+            this.records = response.data.records;
+          })
+          .catch(error => {
+            if (error.response.status === 401) {
+              localStorage.removeItem('auth_token');
+              location.href = './login.html';
+            }
+
+            console.log(error.response.data);
+          });
+        }
+      }
+    });
+  </script>
 </body>
 </html>
