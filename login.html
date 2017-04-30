@@ -48,7 +48,7 @@
   <!--main container-->
   <div class="columns is-mobile" id="app">
     <!--notification-->
-    <div class="notification is-success" v-show="showNotification">
+    <div :class="notificationClass" v-show="showNotification">
       <button class="delete" @click="deleteNotification"></button>
       {{ message }}
     </div>
@@ -107,7 +107,7 @@
             </template>
             <template v-else>
               <p class="control">
-                <button class="button is-success" id="log-in-button" @click.prevent="submitSignIn">
+                <button class="button is-success" id="log-in-button" @click.prevent="submitSignUp">
                   Submit
                 </button>
                 <button class="button is-light" id="sign-in-button" @click.prevent="toggleSignUp">
@@ -134,6 +134,8 @@
         for (let field in data) {
           this[field] = data[field];
         }
+
+        this.hasError = false;
       }
 
       data() {
@@ -162,13 +164,16 @@
           .then(response => {
             if(response.data['auth_token']) {
               localStorage.setItem('auth_token', response.data['auth_token']);
+              location.href = './content.html';
             } else {
-              app.succesNotification();
+              this.hasError = false;
+              app.renderNotification('Successfully Signed up');
               app.toggleSignUp();
             }
           })
           .catch(error => {
-            console.log(error);
+            this.hasError = true;
+            app.renderNotification(error.response.data);
           });
       }
     }
@@ -187,6 +192,16 @@
         message: '',
       },
 
+      computed: {
+        notificationClass() {
+          return {
+            notification: true,
+            'is-success': !this.form.hasError,
+            'is-danger': this.form.hasError
+          }
+        }
+      },
+
       methods: {
         toggleSignUp() {
           this.isSignUp = !this.isSignUp;
@@ -201,12 +216,13 @@
           this.form.submit('http://localhost:2300/api/auth/sign_up');
         },
 
-        succesNotification() {
-          this.message = 'Successfully Singned Up';
+        renderNotification(message) {
+          this.message = message;
           this.showNotification = true;
         },
 
         deleteNotification() {
+          this.form.hasError = false;
           this.showNotification = false;
         }
       }
