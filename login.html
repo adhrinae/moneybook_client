@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.16.1/axios.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.3.0/vue.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/js-sha256/0.5.0/sha256.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.4.1/css/bulma.min.css">
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
   <title>MoneyBook</title>
@@ -52,7 +53,7 @@
           <!--email input-->
           <div class="field">
             <p class="control has-icons-left">
-              <input class="input" type="email" placeholder="Email">
+              <input class="input" type="email" placeholder="Email" v-model="form.email">
               <span class="icon is-small is-left">
                 <i class="fa fa-envelope"></i>
               </span>
@@ -62,7 +63,7 @@
           <!--password input-->
           <div class="field">
             <p class="control has-icons-left">
-              <input class="input" type="password" placeholder="Password">
+              <input class="input" type="password" placeholder="Password" v-model="form.password">
               <span class="icon is-small is-left">
                 <i class="fa fa-lock"></i>
               </span>
@@ -73,7 +74,7 @@
           <template v-if="isSignIn">
             <div class="field">
               <p class="control has-icons-left">
-                <input class="input" type="password" placeholder="Password Confirmation">
+                <input class="input" type="password" placeholder="Password Confirmation" v-model="form.password_confirmation">
                 <span class="icon is-small is-left">
                   <i class="fa fa-lock"></i>
                 </span>
@@ -115,19 +116,56 @@
   <!--end of container-->
 
   <script>
+    class Form {
+      constructor(data) {
+        this.originalData = data;
+
+        for (let field in data) {
+          this[field] = data[field];
+        }
+      }
+
+      data() {
+        let data = {};
+
+        for (let field in this.originalData) {
+          if (field.match(/^password/) && data[field] !== '') {
+            data[field] = sha256(`moneybook:${this[field]}`);
+          } else {
+            data[field] = this[field];
+          }
+        }
+
+        return data;
+      }
+
+      reset() {
+        for (let field in this.originalData) {
+          this[field] = '';
+        }
+      }
+    }
+
     const app = new Vue({
       el: '#app',
 
       data: {
         isSignIn: false,
+        form: new Form({
+          email: '',
+          password: '',
+          password_confirmation: ''
+        })
       },
 
       methods: {
         toggleSignIn() {
           this.isSignIn = !this.isSignIn;
+          this.form.reset();
         }
       }
     });
+
   </script>
 </body>
 </html>
