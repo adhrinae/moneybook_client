@@ -37,11 +37,22 @@
     #sign-in-button {
       float: right;
     }
+
+    .notification {
+      position: absolute;
+      right: 0;
+    }
   </style>
 </head>
 <body>
   <!--main container-->
   <div class="columns is-mobile" id="app">
+    <!--notification-->
+    <div class="notification is-success" v-show="showNotification">
+      <button class="delete" @click="deleteNotification"></button>
+      {{ message }}
+    </div>
+
     <!--centered column-->
     <div class="column is-half is-offset-one-quarter">
 
@@ -71,7 +82,7 @@
           </div>
 
           <!--password confirmation-->
-          <template v-if="isSignIn">
+          <template v-if="isSignUp">
             <div class="field">
               <p class="control has-icons-left">
                 <input class="input" type="password" placeholder="Password Confirmation" v-model="form.password_confirmation">
@@ -84,22 +95,22 @@
 
           <!--buttons-->
           <div class="field">
-            <template v-if="!isSignIn">
+            <template v-if="!isSignUp">
               <p class="control">
-                <button class="button is-success" id="log-in-button">
+                <button class="button is-success" id="log-in-button" @click.prevent="submitLogin">
                   Login
                 </button>
-                <button class="button is-info" id="sign-in-button" @click.prevent="toggleSignIn">
+                <button class="button is-info" id="sign-in-button" @click.prevent="toggleSignUp">
                   Sign up
                 </button>
               </p>
             </template>
             <template v-else>
               <p class="control">
-                <button class="button is-success" id="log-in-button">
+                <button class="button is-success" id="log-in-button" @click.prevent="submitSignIn">
                   Submit
                 </button>
-                <button class="button is-light" id="sign-in-button" @click.prevent="toggleSignIn">
+                <button class="button is-light" id="sign-in-button" @click.prevent="toggleSignUp">
                   Back
                 </button>
               </p>
@@ -144,24 +155,59 @@
           this[field] = '';
         }
       }
+
+      submit(url) {
+        let data = { user: this.data() };
+        axios.post(url, data)
+          .then(response => {
+            if(response.data['auth_token']) {
+              localStorage.setItem('auth_token', response.data['auth_token']);
+            } else {
+              app.succesNotification();
+              app.toggleSignUp();
+            }
+          })
+          .catch(error => {
+            console.log(error);
+          });
+      }
     }
 
     const app = new Vue({
       el: '#app',
 
       data: {
-        isSignIn: false,
+        isSignUp: false,
+        showNotification: false,
         form: new Form({
           email: '',
           password: '',
           password_confirmation: ''
-        })
+        }),
+        message: '',
       },
 
       methods: {
-        toggleSignIn() {
-          this.isSignIn = !this.isSignIn;
+        toggleSignUp() {
+          this.isSignUp = !this.isSignUp;
           this.form.reset();
+        },
+
+        submitLogin() {
+          this.form.submit('http://localhost:2300/api/auth/sign_in');
+        },
+
+        submitSignUp() {
+          this.form.submit('http://localhost:2300/api/auth/sign_up');
+        },
+
+        succesNotification() {
+          this.message = 'Successfully Singned Up';
+          this.showNotification = true;
+        },
+
+        deleteNotification() {
+          this.showNotification = false;
         }
       }
     });
