@@ -124,8 +124,14 @@
         </thead>
         <tbody>
           <template v-for="(record, index) in allRecords">
-            <record-row v-if="!record.isEditMode" @toggle-edit="toggleEditModeOf(index)" :record="record"></record-row>
-            <update-row v-else @toggle-edit="toggleEditModeOf(index)" :record="record" :form="updateForm" @form-update="form => { updateForm = form }"></update-row>
+            <record-row v-if="!record.isEditMode"
+              @toggle-edit="toggleEditModeOf(index)"
+              :record="record"></record-row>
+            <update-row v-else
+              @toggle-edit="toggleEditModeOf(index)"
+              :record="record" :form="updateForm"
+              @form-update="form => { updateForm = form }"
+              @update-record="updateRecord"></update-row>
           </template>
         </tbody>
       </table>
@@ -174,6 +180,28 @@
         .catch(error => {
           console.log(error.response.data);
         });
+      }
+
+      update() {
+        let record_id = this.id;
+        let data = { record: this.data() };
+        let token = localStorage.getItem('auth_token');
+
+        axios({
+          method: 'patch',
+          url: `http://localhost:2300/api/records/${record_id}`,
+          data: data,
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).then(response => {
+          let index = app.records.findIndex(record => {
+            return record.id === response.data.id;
+          });
+
+          app.records.splice(index, 1, response.data);
+        })
+        .catch(error => {
+          console.log(error.response.data);
+        })
       }
     }
 
@@ -227,14 +255,14 @@
           </td>
           <td>
             <button class="button is-danger" @click="toggleEdit">Cancel</button>
-            <button class="button is-light">Update</button>
+            <button class="button is-light" @click="updateRecord">Update</button>
           </td>
         </tr>
       `,
 
       computed: {
         editForm() {
-          let form = {};
+          let form = this.form;
 
           for (let field in this.record) {
             form[field] = this.record[field];
@@ -253,6 +281,10 @@
           this.editForm[field] = value;
 
           this.$emit('form-update', this.editForm);
+        },
+
+        updateRecord() {
+          this.$emit('update-record');
         }
       }
     }
@@ -268,6 +300,7 @@
           description: ''
         }),
         updateForm: new Form({
+          type: 'income',
           id: '',
           amount: '',
           description: ''
@@ -349,6 +382,10 @@
 
         insertRecord() {
           this.insertForm.create();
+        },
+
+        updateRecord() {
+          this.updateForm.update();
         },
 
         toggleEditModeOf(index) {
