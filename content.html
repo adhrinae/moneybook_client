@@ -60,7 +60,15 @@
       <!--input form-->
       <div class="field has-addons">
         <p class="control">
-          <input class="input" type="number" v-model="insertForm.amount" placeholder="Amount">
+          <span class="select">
+            <select v-model="insertForm.type">
+              <option value="income">+</option>
+              <option value="outcome">-</option>
+            </select>
+          </span>
+        </p>
+        <p class="control">
+          <input class="input" type="number" v-model="insertForm.amount" placeholder="Amount" min="1">
         </p>
         <p class="control is-expanded">
           <input class="input" type="text" v-model="insertForm.description" placeholder="Description">
@@ -134,11 +142,17 @@
         for (let field in data) {
           this[field] = data[field];
         }
+
+        delete this.originalData.type;
       }
 
       data() {
         let data = {};
-        
+
+        if (this.type !== 'income') {
+          this.amount = this.amount * -1;
+        }
+
         for (let field in this.originalData) {
           data[field] = this[field];
         }
@@ -167,6 +181,7 @@
 
     const RecordRow = {
       props: ['record'],
+
       template: `
         <tr>
           <td>{{ record.created_at }}</td>
@@ -174,7 +189,7 @@
             income: record.amount > 0,
             outcome: record.amount < 0
           }">
-            {{ record.amount }}
+            {{ record.amount | setSign }}
           </td>
           <td>{{ record.description }}</td>
           <td>
@@ -183,6 +198,13 @@
           </td>
         </tr>
       `,
+
+      filters: {
+        setSign(value) {
+          return value > 0 ? "+" + value : value;
+        }
+      },
+
       methods: {
         toggleEdit() {
           this.$emit('toggle-edit');
@@ -192,6 +214,7 @@
 
     const UpdateRow = {
       props: ['record', 'form'],
+
       template: `
         <tr>
           <input type="hidden" :record_id="record.id" />
@@ -208,6 +231,7 @@
           </td>
         </tr>
       `,
+
       methods: {
         toggleEdit() {
           this.$emit('toggle-edit');
@@ -221,6 +245,7 @@
       data: {
         records: [],
         insertForm: new Form({
+          type: 'income',
           amount: '',
           description: ''
         }),
@@ -245,7 +270,7 @@
         },
 
         sumOfIncome() {
-          return this.records.filter(record => {
+          return "+" + this.records.filter(record => {
             return record.amount > 0;
           }).reduce((sum, income) => {
             return sum + income.amount;
