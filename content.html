@@ -124,10 +124,8 @@
         </thead>
         <tbody>
           <template v-for="(record, index) in allRecords">
-            <tr>
-              <record-row v-if="!record.isEditMode" @toggle-edit="toggleEditModeOf(index)" :record="record"></record-row>
-              <update-row v-else @toggle-edit="toggleEditModeOf(index)" :record="record"></update-row>
-            </tr>
+            <record-row v-if="!record.isEditMode" @toggle-edit="toggleEditModeOf(index)" :record="record"></record-row>
+            <update-row v-else @toggle-edit="toggleEditModeOf(index)" :record="record" :form="updateForm" @form-update="form => { updateForm = form }"></update-row>
           </template>
         </tbody>
       </table>
@@ -180,7 +178,7 @@
     }
 
     const RecordRow = {
-      props: ['record'],
+      props: ['record', 'form'],
 
       template: `
         <tr>
@@ -220,21 +218,41 @@
           <input type="hidden" :record_id="record.id" />
           <td>{{ record.created_at }}</td>
           <td>
-            <input class="input" type="number" :value="record.amount" />
+            <input class="input" type="number" :value="record.amount"
+                   @input="updateFormValue('amount', $event.target.value)" />
           </td>
           <td>
-            <input class="input" type="text" :value="record.description" />
+            <input class="input" type="text" :value="record.description"
+                   @input="updateFormValue('description', $event.target.value)" />
           </td>
           <td>
-            <button class="button is-danger">Delete</button>
-            <button class="button is-light" @click="toggleEdit">Back</button>
+            <button class="button is-danger" @click="toggleEdit">Cancel</button>
+            <button class="button is-light">Update</button>
           </td>
         </tr>
       `,
 
+      computed: {
+        editForm() {
+          let form = {};
+
+          for (let field in this.record) {
+            form[field] = this.record[field];
+          }
+
+          return form;
+        }
+      },
+
       methods: {
         toggleEdit() {
           this.$emit('toggle-edit');
+        },
+
+        updateFormValue(field, value) {
+          this.editForm[field] = value;
+
+          this.$emit('form-update', this.editForm);
         }
       }
     }
@@ -249,6 +267,11 @@
           amount: '',
           description: ''
         }),
+        updateForm: new Form({
+          id: '',
+          amount: '',
+          description: ''
+        })
       },
 
       computed: {
