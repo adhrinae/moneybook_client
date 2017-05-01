@@ -46,6 +46,10 @@
   .outcome {
     color: red;
   }
+
+  .table td {
+    padding: .6em .6em;
+  }
   </style>
 </head>
 <body>
@@ -111,8 +115,11 @@
           </tr>
         </thead>
         <tbody>
-          <template v-for="record in allRecords">
-            <record-row :record="record"></record-row>
+          <template v-for="(record, index) in allRecords">
+            <tr>
+              <record-row v-if="!record.isEditMode" @toggle-edit="toggleEditModeOf(index)" :record="record"></record-row>
+              <update-row v-else @toggle-edit="toggleEditModeOf(index)" :record="record"></update-row>
+            </tr>
           </template>
         </tbody>
       </table>
@@ -162,7 +169,6 @@
       props: ['record'],
       template: `
         <tr>
-          <input type="hidden" name="record_id" :value="record.id">
           <td>{{ record.created_at }}</td>
           <td :class="{
             income: record.amount > 0,
@@ -173,11 +179,41 @@
           <td>{{ record.description }}</td>
           <td>
             <button class="button is-danger">Delete</button>
-            <button class="button is-light">Edit</button>
+            <button class="button is-light" @click="toggleEdit">Edit</button>
           </td>
         </tr>
-      `
+      `,
+      methods: {
+        toggleEdit() {
+          this.$emit('toggle-edit');
+        }
+      }
     };
+
+    const UpdateRow = {
+      props: ['record', 'form'],
+      template: `
+        <tr>
+          <input type="hidden" :record_id="record.id" />
+          <td>{{ record.created_at }}</td>
+          <td>
+            <input class="input" type="number" :value="record.amount" />
+          </td>
+          <td>
+            <input class="input" type="text" :value="record.description" />
+          </td>
+          <td>
+            <button class="button is-danger">Delete</button>
+            <button class="button is-light" @click="toggleEdit">Back</button>
+          </td>
+        </tr>
+      `,
+      methods: {
+        toggleEdit() {
+          this.$emit('toggle-edit');
+        }
+      }
+    }
 
     const app = new Vue({
       el: '#app',
@@ -202,7 +238,8 @@
               id: record.id,
               amount: record.amount,
               description: record.description,
-              created_at: localCreatedAt
+              created_at: localCreatedAt,
+              isEditMode: record.isEditMode
             }
           });
         },
@@ -248,7 +285,9 @@
             headers: { 'Authorization': `Bearer ${token}` }
           })
           .then(response => {
-            this.records = response.data.records;
+            this.records = response.data.records.map(record =>{
+              return Object.assign(record, { isEditMode: false });
+            });
           })
           .catch(error => {
             if (error.response.status === 401) {
@@ -263,10 +302,19 @@
         insertRecord() {
           this.insertForm.create();
         },
+
+        toggleEditModeOf(index) {
+          let target_record = this.records[index];
+          this.records.splice(index, 1,
+            Object.assign(target_record, {
+              isEditMode: !target_record.isEditMode
+            }));
+        }
       },
 
       components: {
         'record-row': RecordRow,
+        'update-row': UpdateRow
       }
     });
   </script>
