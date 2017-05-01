@@ -126,6 +126,7 @@
           <template v-for="(record, index) in allRecords">
             <record-row v-if="!record.isEditMode"
               @toggle-edit="toggleEditModeOf(index)"
+              @delete-record="deleteRecord(index)"
               :record="record"></record-row>
             <update-row v-else
               @toggle-edit="toggleEditModeOf(index)"
@@ -206,7 +207,7 @@
     }
 
     const RecordRow = {
-      props: ['record', 'form'],
+      props: ['record'],
 
       template: `
         <tr>
@@ -219,7 +220,7 @@
           </td>
           <td>{{ record.description }}</td>
           <td>
-            <button class="button is-danger">Delete</button>
+            <button class="button is-danger" @click="deleteRecord">Delete</button>
             <button class="button is-light" @click="toggleEdit">Edit</button>
           </td>
         </tr>
@@ -234,6 +235,10 @@
       methods: {
         toggleEdit() {
           this.$emit('toggle-edit');
+        },
+
+        deleteRecord() {
+          this.$emit('delete-record');
         }
       }
     };
@@ -386,6 +391,23 @@
 
         updateRecord() {
           this.updateForm.update();
+        },
+
+        deleteRecord(index) {
+          let record_id = this.records[index].id;
+          let token = localStorage.getItem('auth_token');
+          
+          axios({
+            method: 'delete',
+            url: `http://localhost:2300/api/records/${record_id}`,
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+          .then(response => {
+            this.records.splice(index, 1);
+          })
+          .catch(error => {
+            console.log(error.response.data);
+          });
         },
 
         toggleEditModeOf(index) {
