@@ -56,13 +56,13 @@
       <!--input form-->
       <div class="field has-addons">
         <p class="control">
-          <input class="input" type="number" name="amount" placeholder="Amount">
+          <input class="input" type="number" v-model="insertForm.amount" placeholder="Amount">
         </p>
         <p class="control is-expanded">
-          <input class="input" type="text" name="description" placeholder="Description">
+          <input class="input" type="text" v-model="insertForm.description" placeholder="Description">
         </p>
         <p class="control">
-          <button class="button is-primary">Save</button>
+          <button class="button is-primary" @click="insertRecord">Save</button>
         </p>
       </div>
 
@@ -112,21 +112,7 @@
         </thead>
         <tbody>
           <template v-for="record in allRecords">
-            <tr>
-              <input type="hidden" name="record_id" :value="record.id">
-              <td>{{ record.created_at }}</td>
-              <td :class="{
-                income: record.amount > 0,
-                outcome: record.amount < 0
-              }">
-                {{ record.amount }}
-              </td>
-              <td>{{ record.description }}</td>
-              <td>
-                <button class="button is-danger">Delete</button>
-                <button class="button is-light">Edit</button>
-              </td>
-            </tr>
+            <record-row :record="record"></record-row>
           </template>
         </tbody>
       </table>
@@ -134,18 +120,81 @@
   </div>
 
   <script>
+    class Form {
+      constructor(data) {
+        this.originalData = data;
+        
+        for (let field in data) {
+          this[field] = data[field];
+        }
+      }
+
+      data() {
+        let data = {};
+        
+        for (let field in this.originalData) {
+          data[field] = this[field];
+        }
+
+        return data;
+      }
+
+      create() {
+        let data = { record: this.data() };
+        let token = localStorage.getItem('auth_token');
+
+        axios({
+          method: 'post',
+          url: 'http://localhost:2300/api/records',
+          data: data,
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        .then(response => {
+          app.records.push(response.data);
+        })
+        .catch(error => {
+          console.log(error.response.data);
+        });
+      }
+    }
+
+    const RecordRow = {
+      props: ['record'],
+      template: `
+        <tr>
+          <input type="hidden" name="record_id" :value="record.id">
+          <td>{{ record.created_at }}</td>
+          <td :class="{
+            income: record.amount > 0,
+            outcome: record.amount < 0
+          }">
+            {{ record.amount }}
+          </td>
+          <td>{{ record.description }}</td>
+          <td>
+            <button class="button is-danger">Delete</button>
+            <button class="button is-light">Edit</button>
+          </td>
+        </tr>
+      `
+    };
+
     const app = new Vue({
       el: '#app',
 
       data: {
         records: [],
-        insertForm: '',
-        updateForm: ''
+        insertForm: new Form({
+          amount: '',
+          description: ''
+        }),
       },
 
       computed: {
         allRecords() {
-          return this.records.reverse().map(record => {
+          return this.records.sort((prevRecord, nextRecord) => {
+            return nextRecord.id - prevRecord.id;
+          }).map(record => {
             let createdAt = record.created_at.replace(/\sUTC$/, '');
             let localCreatedAt = moment.utc(createdAt).local().format('YYYY-MM-DD HH:mm:ss');
 
@@ -209,7 +258,15 @@
 
             console.log(error.response.data);
           });
-        }
+        },
+
+        insertRecord() {
+          this.insertForm.create();
+        },
+      },
+
+      components: {
+        'record-row': RecordRow,
       }
     });
   </script>
